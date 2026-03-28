@@ -366,19 +366,36 @@ export default function Dashboard() {
     try {
       const res = await api.get("/attendance/active-class");
       if (!res.data?.success) { setActiveClass(null); return; }
-      const session = res.data.session;
+    const session = {
+  ...res.data.session,
+  serverTime: res.data.serverTime,
+};
       setActiveClass(session);
-      if (session?.endTime) startTimer(session.endTime);
+     if (session?.endTime && session?.serverTime) {
+  startTimer(session.endTime, session.serverTime);
+}
     } catch { setActiveClass(null); }
   };
-  const startTimer = (endTime) => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = setInterval(() => {
-      const diff = new Date(endTime) - new Date();
-      if (diff <= 0) { clearInterval(timerRef.current); return; }
-      setTimeLeft(Math.floor(diff / 1000));
-    }, 1000);
-  };
+ const startTimer = (endTime, serverTime) => {
+  if (timerRef.current) clearInterval(timerRef.current);
+
+  let current = new Date(serverTime).getTime();
+
+  timerRef.current = setInterval(() => {
+    current += 1000;
+
+    const end = new Date(endTime).getTime();
+    const diff = end - current;
+
+    if (diff <= 0) {
+      clearInterval(timerRef.current);
+      setTimeLeft(0);
+      return;
+    }
+
+    setTimeLeft(Math.floor(diff / 1000));
+  }, 1000);
+};
   const fetchNotifications = async () => {
     try { const res = await api.get("/notifications/my"); setNotifications(res.data?.notifications || []); } catch { setNotifications([]); }
   };
